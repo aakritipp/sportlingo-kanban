@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  useDroppable,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -136,6 +137,11 @@ function SortableTaskCard({ task, teamMembers, onClick }) {
 // Column Component
 // ═══════════════════════════════════════
 function Column({ column, tasks, teamMembers, onTaskClick, isOver }) {
+  const { setNodeRef: setDroppableRef, isOver: isDroppableOver } = useDroppable({
+    id: `column-${column.id}`,
+    data: { type: 'column', columnId: column.id },
+  })
+
   return (
     <div className="column">
       <div className="column-header">
@@ -146,7 +152,7 @@ function Column({ column, tasks, teamMembers, onTaskClick, isOver }) {
         </div>
       </div>
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-        <div className={`column-body ${isOver ? 'drag-over' : ''}`}>
+        <div ref={setDroppableRef} className={`column-body ${(isOver || isDroppableOver) ? 'drag-over' : ''}`}>
           {tasks.length === 0 ? (
             <div className="empty-column">
               <Inbox />
@@ -516,6 +522,8 @@ export default function App() {
     const overTask = tasks.find(t => t.id === over.id)
     if (overTask) {
       setOverColumnId(overTask.status)
+    } else if (String(over.id).startsWith('column-')) {
+      setOverColumnId(String(over.id).replace('column-', ''))
     }
   }
 
@@ -533,10 +541,8 @@ export default function App() {
     const overTask = tasks.find(t => t.id === over.id)
     if (overTask) {
       destColumn = overTask.status
-    } else {
-      // over.id might be a column id
-      const col = COLUMNS.find(c => c.id === over.id)
-      if (col) destColumn = col.id
+    } else if (String(over.id).startsWith('column-')) {
+      destColumn = String(over.id).replace('column-', '')
     }
 
     if (destColumn && destColumn !== activeTask.status) {
